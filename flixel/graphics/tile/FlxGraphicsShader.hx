@@ -28,11 +28,6 @@ void main(void)
 uniform bool hasTransform;
 uniform bool hasColorTransform;
 
-vec4 flixel_texture2D(sampler2D bitmap, vec2 coord) {
-	vec4 color = texture2D(bitmap, coord);
-	return applyFlixelEffects(color);
-}
-
 vec4 applyFlixelEffects(vec4 color) {
 	if (!hasTransform) {
 		return color;
@@ -53,6 +48,11 @@ vec4 applyFlixelEffects(vec4 color) {
 		return vec4(color.rgb * color.a * openfl_Alphav, color.a * openfl_Alphav);
 	}
 	return vec4(0.0, 0.0, 0.0, 0.0);
+}
+
+vec4 flixel_texture2D(sampler2D bitmap, vec2 coord) {
+	vec4 color = texture2D(bitmap, coord);
+	return applyFlixelEffects(color);
 }
 
 uniform vec4 _camSize;
