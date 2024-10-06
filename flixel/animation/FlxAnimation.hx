@@ -44,6 +44,12 @@ class FlxAnimation extends FlxBaseAnimation
 	public var finished(default, null):Bool = true;
 
 	/**
+	 * Whether the current animation is at the end aka the last frame.
+	 * Works both when looping and reversed.
+	**/
+	public var isAtEnd(get, never):Bool;
+
+	/**
 	 * Whether the current animation gets updated or not.
 	 */
 	public var paused:Bool = true;
@@ -292,5 +298,9 @@ class FlxAnimation extends FlxBaseAnimation
 	inline function set_delay(value:Float)
 	{
 		return frameDuration = value;
+	}
+
+	inline function get_isAtEnd() {
+		return reversed ? curFrame == 0 : curFrame == numFrames - 1;
 	}
 }
