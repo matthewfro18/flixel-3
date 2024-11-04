@@ -1501,6 +1501,81 @@ class FlxBasePoint implements IFlxPooled
 	}
 
 	/**
+	 * Adds to the coordinates of this point.
+	 *
+	 * @param   x  Amount to add to x
+	 * @param   y  Amount to add to y
+	 * @return  This point.
+	 */
+	public inline function add(x:Float = 0, y:Float = 0):FlxPoint
+	{
+		this.x = this.x + x;
+		this.y = this.y + y;
+		return this;
+	}
+
+	/**
+	 * Subtracts from the coordinates of this point.
+	 *
+	 * @param   x  Amount to subtract from x
+	 * @param   y  Amount to subtract from y
+	 * @return  This point.
+	 */
+	public inline function subtract(x:Float = 0, y:Float = 0):FlxPoint
+	{
+		this.x = this.x - x;
+		this.y = this.y - y;
+		return this;
+	}
+
+	/**
+	 * Scale this point.
+	 *
+	 * @param   x - scale x coefficient
+	 * @param   y - scale y coefficient, if omitted, x is used
+	 * @return  scaled point
+	 */
+	public inline function scale(x:Float, ?y:Float):FlxPoint
+	{
+		if (y == null)
+			y = x;
+
+		this.x = this.x * x;
+		this.y = this.y * y;
+		return this;
+	}
+
+	/**
+	 * Rounds x and y using Math.floor()
+	 */
+	public inline function floor():FlxPoint
+	{
+		x = Math.floor(x);
+		y = Math.floor(y);
+		return this;
+	}
+
+	/**
+	 * Rounds x and y using Math.ceil()
+	 */
+	public inline function ceil():FlxPoint
+	{
+		x = Math.ceil(x);
+		y = Math.ceil(y);
+		return this;
+	}
+
+	/**
+	 * Rounds x and y using Math.round()
+	 */
+	public inline function round():FlxPoint
+	{
+		x = Math.round(x);
+		y = Math.round(y);
+		return this;
+	}
+
+	/**
 	 * Add this FlxBasePoint to the recycling pool.
 	 */
 	public function put():Void
