@@ -80,7 +80,13 @@ class FlxG
 	/**
 	 * How fast or slow time should pass in the game; default is `1.0`.
 	 */
-	public static var timeScale:Float = 1;
+	public static var timeScale:Float = 1.0;
+
+	/**
+	 * How fast or slow animations should pass in the game; default is `1.0`.
+	 * @since 5.5.0
+	 */
+	public static var animationTimeScale:Float = 1.0;
 
 	/**
 	 * How many times the quad tree should divide the world on each axis.
@@ -558,13 +564,12 @@ class FlxG
 	 * @param   URL      The address of the web page.
 	 * @param   Target   `"_blank"`, `"_self"`, `"_parent"` or `"_top"`
 	 */
-	public static inline function openURL(URL:String, Target:String = "_blank"):Void
+	public static inline function openURL(url:String, target:String = "_blank"):Void
 	{
-		var prefix:String = "";
-		// if the URL does not already start with "http://" or "https://", add it.
-		if (!~/^https?:\/\//.match(URL))
-			prefix = "http://";
-		Lib.getURL(new URLRequest(prefix + URL), Target);
+		// if the url does not already start with a protocol, add it.
+		if (!~/^.\w+?:\/*/.match(url))
+			url = "https://" + url;
+		Lib.getURL(new URLRequest(url), target);
 	}
 
 	/**
@@ -693,6 +698,7 @@ class FlxG
 		autoPause = true;
 		fixedTimestep = true;
 		timeScale = 1.0;
+		animationTimeScale = 1.0;
 		elapsed = 0;
 		maxElapsed = 0.1;
 		worldBounds.set(-10, -10, width + 20, height + 20);

@@ -80,10 +80,10 @@ class ConsoleUtil
 	 * @param	ObjectAlias	The name with which you want to access the object.
 	 * @param	AnyObject	The object to register.
 	 */
-	public static function registerObject(ObjectAlias:String, AnyObject:Dynamic):Void
+	public static function registerObject(alias:String, object:Dynamic):Void
 	{
-		if (AnyObject == null || Reflect.isObject(AnyObject))
-			interp.variables.set(ObjectAlias, AnyObject);
+		if (object == null || Reflect.isObject(object))
+			interp.variables.set(alias, object);
 	}
 
 	/**
@@ -92,10 +92,21 @@ class ConsoleUtil
 	 * @param 	FunctionAlias	The name with which you want to access the function.
 	 * @param 	Function		The function to register.
 	 */
-	public static function registerFunction(FunctionAlias:String, Function:Dynamic):Void
+	public static function registerFunction(alias:String, func:Dynamic):Void
 	{
-		if (Reflect.isFunction(Function))
-			interp.variables.set(FunctionAlias, Function);
+		if (Reflect.isFunction(func))
+			interp.variables.set(alias, func);
+	}
+
+	/**
+	 * Removes an alias from the command registry.
+	 *
+	 * @param   alias  The alias to remove.
+	 * @since 5.4.0
+	 */
+	public static function removeByAlias(alias:String):Void
+	{
+		interp.variables.remove(alias);
 	}
 	#end
 
@@ -109,7 +120,7 @@ class ConsoleUtil
 		else if (Reflect.isObject(Object)) // get instance fields
 			fields = Type.getInstanceFields(Type.getClass(Object));
 
-		// on Flash, enums are classes, so Std.is(_, Enum) fails
+		// on Flash, enums are classes, so Std.isOfType(_, Enum) fails
 		fields.remove("__constructs__");
 
 		var filteredFields = [];

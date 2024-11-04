@@ -196,7 +196,11 @@ class Console extends Window
 	function onKeyDown(e:KeyboardEvent)
 	{
 		if (completionList.visible)
+		{
+			// Fixes issue with listening for key down events - https://github.com/HaxeFlixel/flixel/pull/3225
+			completionList.onKeyDown(e);
 			return;
+		}
 
 		switch (e.keyCode)
 		{
@@ -217,6 +221,25 @@ class Console extends Window
 			case Keyboard.DOWN:
 				if (!history.isEmpty)
 					setText(history.getNextCommand());
+
+				#if html5
+				// FlxKeyboard.preventDefaultKeys adds "preventDefault" on HTML5
+				// so it ends up not fully propegating our inputs to the stage/event listeners
+				// we do this small work around so we don't need to mess around with lime/openfl events
+				// todo: support the modifier keys
+				case Keyboard.RIGHT:
+					if (FlxG.keys.preventDefaultKeys.contains(Keyboard.RIGHT))
+					{
+						@:privateAccess
+						input.window_onKeyDown(RIGHT, 0);
+					}
+				case Keyboard.LEFT:
+					if (FlxG.keys.preventDefaultKeys.contains(Keyboard.LEFT))
+					{
+						@:privateAccess
+						input.window_onKeyDown(LEFT, 0);
+					}
+				#end
 		}
 	}
 
@@ -260,10 +283,10 @@ class Console extends Window
 		}
 	}
 
-	override public function reposition(X:Float, Y:Float)
+	override public function reposition(x:Float, y:Float)
 	{
-		super.reposition(X, Y);
-		completionList.setY(y + Window.HEADER_HEIGHT);
+		super.reposition(x, y);
+		completionList.setY(this.y + Window.HEADER_HEIGHT);
 		completionList.close();
 	}
 	#end
@@ -275,15 +298,15 @@ class Console extends Window
 	 * @param 	Function		The function to register.
 	 * @param 	HelpText		An optional string to trace to the console using the "help" command.
 	 */
-	public function registerFunction(functionAlias:String, func:Dynamic, ?helpText:String)
+	public function registerFunction(alias:String, func:Dynamic, ?helpText:String)
 	{
-		registeredFunctions.set(functionAlias, func);
+		registeredFunctions.set(alias, func);
 		#if hscript
-		ConsoleUtil.registerFunction(functionAlias, func);
+		ConsoleUtil.registerFunction(alias, func);
 		#end
 
 		if (helpText != null)
-			registeredHelp.set(functionAlias, helpText);
+			registeredHelp.set(alias, helpText);
 	}
 
 	/**
@@ -292,12 +315,73 @@ class Console extends Window
 	 * @param 	ObjectAlias		The name with which you want to access the object.
 	 * @param 	AnyObject		The object to register.
 	 */
-	public function registerObject(objectAlias:String, anyObject:Dynamic)
+	public function registerObject(alias:String, object:Dynamic)
 	{
-		registeredObjects.set(objectAlias, anyObject);
+		registeredObjects.set(alias, object);
 		#if hscript
-		ConsoleUtil.registerObject(objectAlias, anyObject);
+		ConsoleUtil.registerObject(alias, object);
 		#end
+	}
+
+	/**
+	 * Removes an object or function from the command registry.
+	 *
+	 * @param   alias  The alias to remove.
+	 * @since 5.4.0
+	 */
+	public function removeByAlias(alias:String)
+	{
+		registeredObjects.remove(alias);
+		registeredFunctions.remove(alias);
+		#if hscript
+		ConsoleUtil.removeByAlias(alias);
+		#end
+	}
+
+	/**
+	 * Removes an object from the command registry by searching through the list.
+	 *
+	 * Note: `removeByAlias` is more performant.
+	 *
+	 * @param   object  The object to remove.
+	 * @since 5.4.0
+	 */
+	public function removeObject(object:Dynamic)
+	{
+		for (alias in registeredObjects.keys())
+		{
+			if (registeredObjects[alias] == object)
+			{
+				registeredObjects.remove(alias);
+				#if hscript
+				ConsoleUtil.removeByAlias(alias);
+				#end
+				break;
+			}
+		}
+	}
+
+	/**
+	 * Removes a function from the command registry by searching through the list.
+	 *
+	 * Note: `removeByAlias` is more performant.
+	 *
+	 * @param   func  The object to remove.
+	 * @since 5.4.0
+	 */
+	public function removeFunction(func:Dynamic)
+	{
+		for (alias in registeredFunctions.keys())
+		{
+			if (registeredFunctions[alias] == func)
+			{
+				registeredFunctions.remove(alias);
+				#if hscript
+				ConsoleUtil.removeByAlias(alias);
+				#end
+				break;
+			}
+		}
 	}
 
 	/**
@@ -311,6 +395,17 @@ class Console extends Window
 	}
 
 	/**
+	 * Removes a class from the command registry.
+	 *
+	 * @param   c  The class to remove.
+	 * @since 5.4.0
+	 */
+	public inline function removeClass(c:Class<Dynamic>)
+	{
+		removeByAlias(FlxStringUtil.getClassName(c, true));
+	}
+
+	/**
 	 * Register a new enum to use in any command.
 	 *
 	 * @param	e	The enum to register.
@@ -319,6 +414,17 @@ class Console extends Window
 	public inline function registerEnum(e:Enum<Dynamic>)
 	{
 		registerObject(FlxStringUtil.getEnumName(e, true), e);
+	}
+
+	/**
+	 * Removes an enum from the command registry.
+	 *
+	 * @param   e  The enum to remove.
+	 * @since 5.4.0
+	 */
+	public inline function removeEnum(e:Enum<Dynamic>):Void
+	{
+		removeByAlias(FlxStringUtil.getEnumName(e, true));
 	}
 
 	override public function destroy()

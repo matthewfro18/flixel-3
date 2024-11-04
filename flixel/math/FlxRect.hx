@@ -236,6 +236,18 @@ class FlxRect implements IFlxPooled
 	}
 
 	/**
+	 * Returns true if this FlxRect contains the FlxPoint
+	 *
+	 * @param   xPos  The x position to check
+	 * @param   yPos  The y position to check
+	 * @return  True if the FlxPoint is within this FlxRect, otherwise false
+	 */
+	public inline function containsXY(xPos:Float, yPos:Float):Bool
+	{
+		return xPos >= left && xPos <= right && yPos >= top && yPos <= bottom;
+	}
+
+	/**
 	 * Add another rectangle to this one by filling in the
 	 * horizontal and vertical space between the two rectangles.
 	 *
@@ -454,6 +466,20 @@ class FlxRect implements IFlxPooled
 
 		rect.putWeak();
 		return result.set(x0, y0, x1 - x0, y1 - y0);
+	}
+
+	/**
+	 * The middle point of this rect
+	 *
+	 * @param   point  The point to hold the result, if `null` a new one is created
+	 * @since 5.9.0
+	 */
+	public function getMidpoint(?point:FlxPoint)
+	{
+		if (point == null)
+			point = FlxPoint.get();
+
+		return point.set(x + 0.5 * width, y + 0.5 * height);
 	}
 
 	/**

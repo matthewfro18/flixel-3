@@ -53,6 +53,18 @@ class Interaction extends Window
 	 */
 	public var shouldDrawItemsSelection:Bool = true;
 
+	/**
+	 * Whether or not the user is using a mac keyboard, determines whether to use command or ctrl
+	 */
+	public final macKeyboard:Bool =
+		#if mac
+		true;
+		#elseif (js && html5)
+		untyped js.Syntax.code("/AppleWebKit/.test (navigator.userAgent) && /Mobile\\/\\w+/.test (navigator.userAgent) || /Mac/.test (navigator.platform)");
+		#else
+		false;
+		#end
+
 	var _container:Sprite;
 	var _customCursor:Sprite;
 	var _tools:Array<Tool> = [];

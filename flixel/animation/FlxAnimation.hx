@@ -1,5 +1,6 @@
 package flixel.animation;
 
+import flixel.util.FlxDestroyUtil;
 import flixel.FlxG;
 import flixel.util.FlxSignal.FlxTypedSignal;
 
@@ -26,7 +27,7 @@ class FlxAnimation extends FlxBaseAnimation
 
 	/**
 	 * Seconds between frames (inverse of the framerate)
-	 * 
+	 *
 	 * Note: `FlxFrameCollections` and `FlxAtlasFrames` may have their own duration set per-frame,
 	 * those values will override this value.
 	 */
@@ -96,7 +97,17 @@ class FlxAnimation extends FlxBaseAnimation
 	 */
 	var _frameTimer:Float = 0;
 
+	/**
+	 * How fast or slow time should pass for this animation.
+	 *
+	 * Similar to `FlxAnimationController`'s `timeScale`, but won't effect other animations.
+	 * @since 5.4.1
+	 */
+	public var timeScale:Float = 1.0;
+
 	public var onFinish:FlxTypedSignal<Void->Void> = new FlxTypedSignal();
+	public var onPlay:FlxTypedSignal<String->Bool->Bool->Int->Void> = new FlxTypedSignal();
+	public var onLoop:FlxTypedSignal<Void->Void> = new FlxTypedSignal();
 
 	/**
 	 * @param   name        What this animation should be called (e.g. `"run"`).
@@ -122,6 +133,8 @@ class FlxAnimation extends FlxBaseAnimation
 	 */
 	override public function destroy():Void
 	{
+		FlxDestroyUtil.destroy(onFinish);
+		FlxDestroyUtil.destroy(onPlay);
 		frames = null;
 		name = null;
 		super.destroy();
@@ -165,6 +178,9 @@ class FlxAnimation extends FlxBaseAnimation
 
 		if (finished)
 			parent.fireFinishCallback(name);
+
+		parent.firePlayCallback(name, Force, Reversed, curFrame);
+		onPlay.dispatch(name, Force, Reversed, curFrame);
 	}
 
 	public function restart():Void
@@ -213,24 +229,37 @@ class FlxAnimation extends FlxBaseAnimation
 		if (curFrameDuration == 0 || finished || paused)
 			return;
 
-		_frameTimer += elapsed;
+		_frameTimer += elapsed * timeScale;
 		while (_frameTimer > curFrameDuration && !finished)
 		{
 			_frameTimer -= curFrameDuration;
 			if (reversed)
 			{
 				if (looped && curFrame == loopPoint)
+				{
 					curFrame = numFrames - 1;
+					parent.fireLoopCallback(name);
+					onLoop.dispatch();
+				}
 				else
 					curFrame--;
 			}
 			else
 			{
 				if (looped && curFrame == numFrames - 1)
+				{
 					curFrame = loopPoint;
+					parent.fireLoopCallback(name);
+					onLoop.dispatch();
+				}
 				else
 					curFrame++;
 			}
+
+			// prevents null ref when the sprite is destroyed on finishCallback (#2782)
+			if (finished)
+				break;
+
 			curFrameDuration = getCurrentFrameDuration();
 		}
 	}
@@ -260,7 +289,7 @@ class FlxAnimation extends FlxBaseAnimation
 
 		if (tempFrame >= 0)
 		{
-			if (!looped && frame > maxFrameIndex)
+			if (!looped && tempFrame > maxFrameIndex)
 			{
 				finished = true;
 				curFrame = reversed ? 0 : maxFrameIndex;
@@ -300,7 +329,8 @@ class FlxAnimation extends FlxBaseAnimation
 		return frameDuration = value;
 	}
 
-	inline function get_isAtEnd() {
+	inline function get_isAtEnd()
+	{
 		return reversed ? curFrame == 0 : curFrame == numFrames - 1;
 	}
 }

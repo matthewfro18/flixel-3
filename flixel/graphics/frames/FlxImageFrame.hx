@@ -91,25 +91,30 @@ class FlxImageFrame extends FlxFramesCollection
 	 */
 	public static function fromGraphic(graphic:FlxGraphic, ?region:FlxRect):FlxImageFrame
 	{
-		if (graphic == null)
+		if (graphic == null || graphic.isDestroyed)
 			return null;
 
 		// find ImageFrame, if there is one already
-		var checkRegion:FlxRect = region;
+		final checkRegion = FlxRect.get(0, 0, graphic.width, graphic.height);
+		if (region != null)
+			region.copyTo(checkRegion);
 
-		if (checkRegion == null)
-			checkRegion = FlxRect.weak(0, 0, graphic.width, graphic.height);
-
-		var imageFrame:FlxImageFrame = FlxImageFrame.findFrame(graphic, checkRegion);
+		final imageFrame:FlxImageFrame = FlxImageFrame.findFrame(graphic, checkRegion);
+		checkRegion.put();
 		if (imageFrame != null)
+		{
+			if (region != null)
+				region.putWeak();
+
 			return imageFrame;
+		}
 
 		// or create it, if there is no such object
-		imageFrame = new FlxImageFrame(graphic);
+		final imageFrame = new FlxImageFrame(graphic);
 
 		if (region == null)
 		{
-			region = FlxRect.get(0, 0, graphic.width, graphic.height);
+			region = FlxRect.weak(0, 0, graphic.width, graphic.height);
 		}
 		else
 		{
@@ -200,6 +205,8 @@ class FlxImageFrame extends FlxFramesCollection
 				return imageFrame;
 		}
 
+		frameBorder.putWeak();
+		frameRect.putWeak();
 		return null;
 	}
 

@@ -21,6 +21,8 @@ class PluginFrontEnd
 	 */
 	public var list(default, null):Array<FlxBasic> = [];
 
+	public var drawOnTop:Bool = false;
+
 	/**
 	 * Adds a new plugin to the global plugin array.
 	 *

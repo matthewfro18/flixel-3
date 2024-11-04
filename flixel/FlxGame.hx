@@ -635,11 +635,6 @@ class FlxGame extends Sprite
 			_skipSplash = true; // only play it once
 		}
 
-		#if FLX_DEBUG
-		if ((_requestedState is FlxSubState))
-			throw "You can't set FlxSubState class instance as the state for you game";
-		#end
-
 		FlxG.reset();
 
 		FlxG.signals.postGameReset.dispatch();
@@ -911,7 +906,16 @@ class FlxGame extends Sprite
 
 		FlxG.cameras.lock();
 
-		FlxG.plugins.draw();
+		if (FlxG.plugins.drawOnTop)
+		{
+			_state.draw();
+			FlxG.plugins.draw();
+		}
+		else
+		{
+			FlxG.plugins.draw();
+			_state.draw();
+		}
 
 		_state.draw();
 

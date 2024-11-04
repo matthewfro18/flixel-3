@@ -1,9 +1,11 @@
 package flixel.animation;
 
+import flixel.util.FlxDestroyUtil;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.graphics.frames.FlxFrame;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
+import flixel.util.FlxSignal.FlxTypedSignal;
 
 class FlxAnimationController implements IFlxDestroyable
 {
@@ -60,8 +62,67 @@ class FlxAnimationController implements IFlxDestroyable
 	/**
 	 * If assigned, will be called each time the current animation finishes.
 	 * A function that has 1 parameter: a string name - animation name.
+	 *
+	 * finishCallback is deprecated, use onFinish.add
 	 */
 	public var finishCallback:(name:String) -> Void;
+
+	/**
+	 * If assigned, will be called each time the current animation is played.
+	 *
+	 * playCallback is deprecated, use onPlay.add
+	 */
+	public var playCallback:(name:String, forced:Bool, reversed:Bool, frame:Int) -> Void;
+
+	/**
+	 * If assigned, will be called each time the current animation loops.
+	 *
+	 * loopCallback is deprecated, use onLoop.add
+	 */
+	public var loopCallback:(animName:String) -> Void;
+
+	/**
+	 * Dispatches each time the current animation's frame changes
+	 *
+	 * @param   animName     The name of the current animation
+	 * @param   frameNumber  The progress of the current animation, in frames
+	 * @param   frameIndex   The current animation's frameIndex in the tile sheet
+	 * @since 5.9.0
+	 */
+	public final onFrameChange = new FlxTypedSignal<(animName:String, frameNumber:Int, frameIndex:Int) -> Void>();
+
+	/**
+	 * Dispatches each time the current animation finishes.
+	 *
+	 * @param   animName  The name of the current animation
+	 * @since 5.9.0
+	 */
+	public final onFinish = new FlxTypedSignal<(animName:String) -> Void>();
+
+	/**
+	 * Dispatches each time the current animation is played.
+	 *
+	 * @param   animName     The name of the current animation
+	 * @param   forced       Whether the animation was forced to play
+	 * @param   reversed     Whether the animation was played in reverse
+	 * @param   frame        The current animation's frameIndex in the tile sheet
+	 * @since 5.9.0
+	 */
+	public final onPlay = new FlxTypedSignal<(animName:String, forced:Bool, reversed:Bool, frame:Int) -> Void>();
+
+	/**
+	 * Dispatches each time the current animation's loop is complete.
+	 * Works only with looped animations.
+	 *
+	 * @param   animName  The name of the current animation
+	 * @since 5.9.0
+	 */
+	public final onLoop = new FlxTypedSignal<(animName:String) -> Void>();
+
+	/**
+	 * How fast or slow time should pass for this animation controller
+	 */
+	public var timeScale:Float = 1.0;
 
 	/**
 	 * Internal, reference to owner sprite.
@@ -90,7 +151,7 @@ class FlxAnimationController implements IFlxDestroyable
 	{
 		if (_curAnim != null)
 		{
-			_curAnim.update(elapsed);
+			_curAnim.update(elapsed * (timeScale * FlxG.animationTimeScale));
 		}
 		else if (_prerotated != null)
 		{
@@ -138,9 +199,16 @@ class FlxAnimationController implements IFlxDestroyable
 
 	public function destroy():Void
 	{
+		FlxDestroyUtil.destroy(onFrameChange);
+		FlxDestroyUtil.destroy(onFinish);
+		FlxDestroyUtil.destroy(onLoop);
+
 		destroyAnimations();
 		_animations = null;
 		callback = null;
+		finishCallback = null;
+		playCallback = null;
+		loopCallback = null;
 		_sprite = null;
 	}
 
@@ -663,23 +731,51 @@ class FlxAnimationController implements IFlxDestroyable
 		frameIndex = FlxG.random.int(0, numFrames - 1);
 	}
 
-	inline function fireCallback():Void
+	@:haxe.warning("-WDeprecated")
+	function fireCallback():Void
 	{
+		final name = (_curAnim != null) ? (_curAnim.name) : null;
+		final number = (_curAnim != null) ? (_curAnim.curFrame) : frameIndex;
 		if (callback != null)
 		{
-			var name:String = (_curAnim != null) ? (_curAnim.name) : null;
-			var number:Int = (_curAnim != null) ? (_curAnim.curFrame) : frameIndex;
 			callback(name, number, frameIndex);
 		}
+
+		onFrameChange.dispatch(name, number, frameIndex);
 	}
 
 	@:allow(flixel.animation)
-	inline function fireFinishCallback(?name:String):Void
+	@:haxe.warning("-WDeprecated")
+	function fireFinishCallback(?name:String):Void
 	{
 		if (finishCallback != null)
 		{
 			finishCallback(name);
 		}
+
+		onFinish.dispatch(name);
+	}
+
+	@:allow(flixel.animation)
+	inline function firePlayCallback(name:String, forced:Bool, reversed:Bool, frame:Int):Void
+	{
+		if (playCallback != null)
+		{
+			playCallback(name, forced, reversed, frame);
+		}
+
+		onPlay.dispatch(name, forced, reversed, frame);
+	}
+
+	@:allow(flixel.animation)
+	inline function fireLoopCallback(name:String):Void
+	{
+		if (loopCallback != null)
+		{
+			loopCallback(name);
+		}
+
+		onLoop.dispatch(name);
 	}
 
 	function byNamesHelper(AddTo:Array<Int>, FrameNames:Array<String>):Void
@@ -763,7 +859,7 @@ class FlxAnimationController implements IFlxDestroyable
 
 	function set_frameName(Value:String):String
 	{
-		if (_sprite.frames != null && _sprite.frames.framesHash.exists(Value))
+		if (_sprite.frames != null && _sprite.frames.exists(Value))
 		{
 			if (_curAnim != null)
 			{
@@ -771,7 +867,7 @@ class FlxAnimationController implements IFlxDestroyable
 				_curAnim = null;
 			}
 
-			var frame = _sprite.frames.framesHash.get(Value);
+			var frame = _sprite.frames.getByName(Value);
 			if (frame != null)
 			{
 				frameIndex = getFrameIndex(frame);

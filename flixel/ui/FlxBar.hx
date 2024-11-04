@@ -780,7 +780,7 @@ class FlxBar extends FlxSprite
 			switch (fillDirection)
 			{
 				case LEFT_TO_RIGHT, TOP_TO_BOTTOM:
-				//	Already handled above
+					//	Already handled above
 
 				case BOTTOM_TO_TOP:
 					_filledBarRect.y = barHeight - _filledBarRect.height;
@@ -868,25 +868,28 @@ class FlxBar extends FlxSprite
 					continue;
 				}
 
-				getScreenPosition(_point, camera).subtractPoint(offset);
-
-				_frontFrame.prepareMatrix(_matrix, FlxFrameAngle.ANGLE_0, flipX, flipY);
+				_frontFrame.prepareMatrix(_matrix, FlxFrameAngle.ANGLE_0, checkFlipX(), checkFlipY());
 				_matrix.translate(-origin.x, -origin.y);
 				_matrix.scale(scale.x, scale.y);
 
 				// rotate matrix if sprite's graphic isn't prerotated
-				if (angle != 0)
+				if (bakedRotationAngle <= 0)
 				{
-					_matrix.rotateWithTrig(_cosAngle, _sinAngle);
+					updateTrig();
+
+					if (angle != 0)
+						_matrix.rotateWithTrig(_cosAngle, _sinAngle);
 				}
 
+				getScreenPosition(_point, camera).subtractPoint(offset);
 				_point.add(origin.x, origin.y);
+				_matrix.translate(_point.x, _point.y);
 				if (isPixelPerfectRender(camera))
 				{
-					_point.floor();
+					_matrix.tx = Math.floor(_matrix.tx);
+					_matrix.ty = Math.floor(_matrix.ty);
 				}
 
-				_matrix.translate(_point.x, _point.y);
 				camera.drawPixels(_frontFrame, _matrix, colorTransform, blend, antialiasing, shaderEnabled ? shader : null);
 			}
 		}
