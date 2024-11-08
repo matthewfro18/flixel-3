@@ -59,9 +59,9 @@ class AngleTween extends FlxTween
 			sprite.angle = spriteAngle;
 		}
 	}
-	
-	override function isTweenOf(object:Dynamic, ?field:String):Bool
+
+	override function isTweenOf(object:Dynamic, ?field:FieldType):Bool
 	{
-		return sprite == object && (field == null || field == "angle");
+		return sprite == object && (field == null || field.match(FIELD("angle")));
 	}
 }

@@ -817,7 +817,7 @@ class FlxTween implements IFlxDestroyable
 	 * 
 	 * @since 4.9.0
 	 */
-	function isTweenOf(Object:Dynamic, ?Field:String):Bool
+	function isTweenOf(Object:Dynamic, ?Field:FieldType):Bool
 	{
 		return false;
 	}
@@ -833,6 +833,79 @@ class FlxTween implements IFlxDestroyable
 		startDelay = (StartDelay != null) ? StartDelay : 0;
 		loopDelay = (LoopDelay != null) ? LoopDelay : 0;
 		return this;
+	}
+
+	/**
+	 * Parses a string into an array of FieldType
+	 *
+	 * Example:
+	 * "health.shield.amount" -> [FIELD("health"), FIELD("shield"), FIELD("amount")]
+	 * "health[0].shield.amount" -> [FIELD("health"), INDEX(0), FIELD("shield"), FIELD("amount")]
+	 * "health.shield[0].amount" -> [FIELD("health"), FIELD("shield"), INDEX(0), FIELD("amount")]
+	 * "" -> [FIELD("")]
+	 * "hello..world" -> [FIELD("hello"), FIELD(""), FIELD("world")]
+	 * "hello.[5]" -> [FIELD("hello"), FIELD(""), INDEX(5)]
+	 * "hello[5]" -> [FIELD("hello"), INDEX(5)]
+	 * "hello." -> [FIELD("hello"), FIELD("")]
+	 *
+	 * @param input The string to parse
+	 * @return An array of FieldType
+	**/
+	public static function parseFieldString(input:String):Array<FieldType>
+	{
+		var result:Array<FieldType> = [];
+		var current = "";
+		var inBracket = false;
+		var lastWasDot = false;
+
+		for (i in 0...input.length)
+		{
+			var c = input.charCodeAt(i);
+
+			if (c == ".".code)
+			{
+				if (!inBracket && (current.length > 0 || lastWasDot))
+				{
+					result.push(FIELD(current));
+					current = "";
+				}
+				lastWasDot = true;
+			}
+			else if (!inBracket && c == "[".code)
+			{
+				if (current.length > 0)
+				{
+					result.push(FIELD(current));
+					current = "";
+				}
+				else if (lastWasDot)
+					result.push(FIELD(""));
+				inBracket = true;
+				lastWasDot = false;
+			}
+			else if (inBracket && c == "]".code)
+			{
+				if (current.length > 0)
+				{
+					result.push(INDEX(Std.parseInt(current)));
+					current = "";
+				}
+				inBracket = false;
+			}
+			else
+			{
+				current += String.fromCharCode(c);
+				lastWasDot = false;
+			}
+		}
+
+		if (current.length > 0 || lastWasDot)
+			result.push(inBracket ? INDEX(Std.parseInt(current)) : FIELD(current));
+
+		if (result.length == 0)
+			result.push(FIELD(""));
+
+		return result;
 	}
 
 	function set_startDelay(value:Float):Float
@@ -1421,18 +1494,34 @@ class FlxTweenManager extends FlxBasic
 			var propertyInfos = new Array<TweenProperty>();
 			for (fieldPath in FieldPaths)
 			{
-				var target = Object;
-				var path = fieldPath.split(".");
+				var target:Dynamic = Object;
+				var path = FlxTween.parseFieldString(fieldPath);
 				var field = path.pop();
 				for (component in path)
 				{
-					target = Reflect.getProperty(target, component);
-					if (!Reflect.isObject(target))
+					switch (component)
+					{
+						case FIELD(field):
+							target = Reflect.getProperty(target, field);
+						case INDEX(index):
+							if ((target is Array))
+							{
+								target = target[index];
+							}
+					}
+					if (!Reflect.isObject(target) && !(target is Array))
 						break;
 				}
 
-				if (Reflect.isObject(target))
-					propertyInfos.push({object: target, field: field});
+				switch (field)
+				{
+					case FIELD(_):
+						if (Reflect.isObject(target))
+							propertyInfos.push({object: target, field: field});
+					case INDEX(_):
+						if ((target is Array))
+							propertyInfos.push({object: target, field: field});
+				}
 			}
 
 			var i = _tweens.length;
@@ -1487,5 +1576,11 @@ class FlxTweenManager extends FlxBasic
 typedef TweenProperty =
 {
 	object:Dynamic,
-	field:String
+	field:FieldType
+}
+
+enum FieldType
+{
+	FIELD(field:String);
+	INDEX(index:Int);
 }
