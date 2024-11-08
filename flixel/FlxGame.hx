@@ -917,8 +917,6 @@ class FlxGame extends Sprite
 			_state.draw();
 		}
 
-		_state.draw();
-
 		if (FlxG.renderTile)
 		{
 			FlxG.cameras.render();
