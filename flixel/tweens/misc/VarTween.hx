@@ -97,11 +97,24 @@ class VarTween extends FlxTween
 					throw 'The object does not have the property "$component" in "$fieldPath"';
 			}
 
+			#if hscript_improved
+			var isCustom = false;
+			var custom:IHScriptCustomBehaviour = null;
+			if (target is IHScriptCustomBehaviour)
+			{
+				isCustom = true;
+				custom = cast target;
+			}
+			#end
+
 			_propertyInfos.push({
 				object: target,
 				field: field,
 				startValue: Math.NaN, // gets set after delay
 				range: Reflect.getProperty(_properties, fieldPath)
+					#if hscript_improved
+					, isCustom: isCustom, custom: custom
+					#end
 			});
 		}
 	}
@@ -152,12 +165,21 @@ class VarTweenProperty
 	public var field:FieldType;
 	public var startValue:Float;
 	public var range:Float;
+	#if hscript_improved
+	@:optional public var isCustom:Bool = false;
+	@:optional public var custom:IHScriptCustomBehaviour;
+	#end
 
 	public function getField():Dynamic
 	{
 		switch (field)
 		{
 			case FIELD(field):
+				#if hscript_improved
+				if (isCustom)
+					return custom.hget(field);
+				else
+				#end
 				return Reflect.getProperty(object, field);
 			case INDEX(index):
 				if ((object is Array))
@@ -174,6 +196,11 @@ class VarTweenProperty
 		switch (field)
 		{
 			case FIELD(field):
+				#if hscript_improved
+				if (isCustom)
+					custom.hset(field, value);
+				else
+				#end
 				Reflect.setProperty(object, field, value);
 			case INDEX(index):
 				if ((object is Array))
