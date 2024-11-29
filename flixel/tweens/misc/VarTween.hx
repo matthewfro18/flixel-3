@@ -96,7 +96,8 @@ class VarTween extends FlxTween
 				}
 				else
 				{ // TClass(String)
-					target = Reflect.getProperty(target, component);
+					if (Reflect.hasField(target, component))
+						target = Reflect.getProperty(target, component);
 				}
 				if (!Reflect.isObject(target) && !(target is Array))
 					throw 'The object does not have the property "$component" in "$fieldPath"';
