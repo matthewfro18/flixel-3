@@ -27,7 +27,7 @@ import openfl.Vector;
 
 using flixel.util.FlxColorTransformUtil;
 
-typedef FlxDrawItem = #if FLX_DRAW_QUADS flixel.graphics.tile.FlxDrawQuadsItem; #else flixel.graphics.tile.FlxDrawTilesItem; #end
+private typedef FlxDrawItem = #if FLX_DRAW_QUADS flixel.graphics.tile.FlxDrawQuadsItem; #else flixel.graphics.tile.FlxDrawTilesItem; #end
 
 /**
  * The camera class is used to display the game's visuals.
