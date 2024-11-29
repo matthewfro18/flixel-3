@@ -1,6 +1,7 @@
 package flixel.tweens.misc;
 
 import flixel.tweens.FlxTween;
+import flixel.util.typeLimit.OneOfTwo;
 #if hscript_improved
 import hscript.IHScriptCustomBehaviour;
 #end
@@ -84,14 +85,18 @@ class VarTween extends FlxTween
 			var field = path.pop();
 			for (component in path)
 			{
-				switch (component)
+				if (Type.typeof(component) == TInt)
 				{
-					case FIELD(field):
-						if (Reflect.isObject(target))
-							target = Reflect.getProperty(target, field);
-					case INDEX(index):
-						if ((target is Array))
-							target = target[index];
+					if ((target is Array))
+					{
+						var index:Int = cast component;
+						var arr:Array<Dynamic> = cast target;
+						target = arr[index];
+					}
+				}
+				else
+				{ // TClass(String)
+					target = Reflect.getProperty(target, component);
 				}
 				if (!Reflect.isObject(target) && !(target is Array))
 					throw 'The object does not have the property "$component" in "$fieldPath"';
@@ -143,14 +148,14 @@ class VarTween extends FlxTween
 		_propertyInfos = null;
 	}
 
-	override function isTweenOf(object:Dynamic, ?field:FieldType):Bool
+	override function isTweenOf(object:Dynamic, ?field:OneOfTwo<String, Int>):Bool
 	{
 		if (object == _object && field == null)
 			return true;
 
 		for (property in _propertyInfos)
 		{
-			if (object == property.object && (field == null || Type.enumEq(field, property.field)))
+			if (object == property.object && (field == null || field == property.field))
 				return true;
 		}
 
@@ -162,7 +167,7 @@ class VarTween extends FlxTween
 class VarTweenProperty
 {
 	public var object:Dynamic;
-	public var field:FieldType;
+	public var field:OneOfTwo<String, Int>;
 	public var startValue:Float;
 	public var range:Float;
 	#if hscript_improved
@@ -172,42 +177,39 @@ class VarTweenProperty
 
 	public function getField():Dynamic
 	{
-		switch (field)
+		if (Type.typeof(field) == TInt)
 		{
-			case FIELD(field):
-				#if hscript_improved
-				if (isCustom)
-					return custom.hget(field);
-				else
-				#end
-				return Reflect.getProperty(object, field);
-			case INDEX(index):
-				if ((object is Array))
-				{
-					var arr:Array<Dynamic> = cast object;
-					return arr[index];
-				}
+			var index:Int = cast field;
+			var arr:Array<Dynamic> = cast object;
+			return arr[index];
 		}
-		return null;
+		else
+		{
+			#if hscript_improved
+			if (isCustom)
+				return custom.hget(field);
+			else
+			#end
+			return Reflect.getProperty(object, field);
+		}
 	}
 
 	public function setField(value:Dynamic):Void
 	{
-		switch (field)
+		if (Type.typeof(field) == TInt)
 		{
-			case FIELD(field):
-				#if hscript_improved
-				if (isCustom)
-					custom.hset(field, value);
-				else
-				#end
-				Reflect.setProperty(object, field, value);
-			case INDEX(index):
-				if ((object is Array))
-				{
-					var arr:Array<Dynamic> = cast object;
-					arr[index] = value;
-				}
+			var index:Int = cast field;
+			var arr:Array<Dynamic> = cast object;
+			arr[index] = value;
+		}
+		else
+		{
+			#if hscript_improved
+			if (isCustom)
+				custom.hset(field, value);
+			else
+			#end
+			Reflect.setProperty(object, field, value);
 		}
 	}
 }

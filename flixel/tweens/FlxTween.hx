@@ -1,16 +1,16 @@
 package flixel.tweens;
 
-import flixel.FlxTypes;
-import flixel.tweens.misc.ShakeTween;
-import flixel.util.FlxAxes;
 import flixel.FlxG;
 import flixel.FlxObject;
 import flixel.FlxSprite;
+import flixel.FlxTypes;
 import flixel.math.FlxMath;
+import flixel.math.FlxPoint;
 import flixel.tweens.FlxEase.EaseFunction;
 import flixel.tweens.misc.AngleTween;
 import flixel.tweens.misc.ColorTween;
 import flixel.tweens.misc.NumTween;
+import flixel.tweens.misc.ShakeTween;
 import flixel.tweens.misc.VarTween;
 import flixel.tweens.motion.CircularMotion;
 import flixel.tweens.motion.CubicMotion;
@@ -19,9 +19,10 @@ import flixel.tweens.motion.LinearPath;
 import flixel.tweens.motion.QuadMotion;
 import flixel.tweens.motion.QuadPath;
 import flixel.util.FlxArrayUtil;
+import flixel.util.FlxAxes;
 import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
-import flixel.math.FlxPoint;
+import flixel.util.typeLimit.OneOfTwo;
 
 /** @since 4.5.0 **/
 enum abstract FlxTweenType(ByteUInt) from ByteUInt to ByteUInt
@@ -817,7 +818,7 @@ class FlxTween implements IFlxDestroyable
 	 * 
 	 * @since 4.9.0
 	 */
-	function isTweenOf(Object:Dynamic, ?Field:FieldType):Bool
+	function isTweenOf(Object:Dynamic, ?Field:OneOfTwo<String, Int>):Bool
 	{
 		return false;
 	}
@@ -836,24 +837,24 @@ class FlxTween implements IFlxDestroyable
 	}
 
 	/**
-	 * Parses a string into an array of FieldType
+	 * Parses a string into an array of OneOfTwo<String, Int>
 	 *
 	 * Example:
-	 * "health.shield.amount" -> [FIELD("health"), FIELD("shield"), FIELD("amount")]
-	 * "health[0].shield.amount" -> [FIELD("health"), INDEX(0), FIELD("shield"), FIELD("amount")]
-	 * "health.shield[0].amount" -> [FIELD("health"), FIELD("shield"), INDEX(0), FIELD("amount")]
-	 * "" -> [FIELD("")]
-	 * "hello..world" -> [FIELD("hello"), FIELD(""), FIELD("world")]
-	 * "hello.[5]" -> [FIELD("hello"), FIELD(""), INDEX(5)]
-	 * "hello[5]" -> [FIELD("hello"), INDEX(5)]
-	 * "hello." -> [FIELD("hello"), FIELD("")]
+	 * "health.shield.amount" -> ["health", "shield", "amount"]
+	 * "health[0].shield.amount" -> ["health", 0, "shield", "amount"]
+	 * "health.shield[0].amount" -> ["health", "shield", 0, "amount"]
+	 * "" -> [""]
+	 * "hello..world" -> ["hello", "", "world"]
+	 * "hello.[5]" -> ["hello", "", 5]
+	 * "hello[5]" -> ["hello", 5]
+	 * "hello." -> ["hello", ""]
 	 *
 	 * @param input The string to parse
-	 * @return An array of FieldType
+	 * @return An array of OneOfTwo<String, Int>
 	**/
-	public static function parseFieldString(input:String):Array<FieldType>
+	public static function parseFieldString(input:String):Array<OneOfTwo<String, Int>>
 	{
-		var result:Array<FieldType> = [];
+		var result:Array<OneOfTwo<String, Int>> = [];
 		var current = "";
 		var inBracket = false;
 		var lastWasDot = false;
@@ -866,7 +867,7 @@ class FlxTween implements IFlxDestroyable
 			{
 				if (!inBracket && (current.length > 0 || lastWasDot))
 				{
-					result.push(FIELD(current));
+					result.push(current);
 					current = "";
 				}
 				lastWasDot = true;
@@ -875,11 +876,11 @@ class FlxTween implements IFlxDestroyable
 			{
 				if (current.length > 0)
 				{
-					result.push(FIELD(current));
+					result.push(current);
 					current = "";
 				}
 				else if (lastWasDot)
-					result.push(FIELD(""));
+					result.push("");
 				inBracket = true;
 				lastWasDot = false;
 			}
@@ -887,7 +888,7 @@ class FlxTween implements IFlxDestroyable
 			{
 				if (current.length > 0)
 				{
-					result.push(INDEX(Std.parseInt(current)));
+					result.push(Std.parseInt(current));
 					current = "";
 				}
 				inBracket = false;
@@ -900,10 +901,10 @@ class FlxTween implements IFlxDestroyable
 		}
 
 		if (current.length > 0 || lastWasDot)
-			result.push(inBracket ? INDEX(Std.parseInt(current)) : FIELD(current));
+			result.push(inBracket ? Std.parseInt(current) : current);
 
 		if (result.length == 0)
-			result.push(FIELD(""));
+			result.push("");
 
 		return result;
 	}
@@ -1499,28 +1500,34 @@ class FlxTweenManager extends FlxBasic
 				var field = path.pop();
 				for (component in path)
 				{
-					switch (component)
+					if (Type.typeof(component) == TInt)
 					{
-						case FIELD(field):
-							target = Reflect.getProperty(target, field);
-						case INDEX(index):
-							if ((target is Array))
-							{
-								target = target[index];
-							}
+						if ((target is Array))
+						{
+							var index:Int = cast component;
+							var arr:Array<Dynamic> = cast target;
+							target = arr[index];
+						}
 					}
+					else
+					{ // TClass(String)
+						var field:String = cast component;
+						target = Reflect.getProperty(target, field);
+					}
+
 					if (!Reflect.isObject(target) && !(target is Array))
 						break;
 				}
 
-				switch (field)
+				if (Type.typeof(field) == TInt)
 				{
-					case FIELD(_):
-						if (Reflect.isObject(target))
-							propertyInfos.push({object: target, field: field});
-					case INDEX(_):
-						if ((target is Array))
-							propertyInfos.push({object: target, field: field});
+					if ((target is Array))
+						propertyInfos.push({object: target, field: field});
+				}
+				else
+				{ // TClass(String)
+					if (Reflect.isObject(target))
+						propertyInfos.push({object: target, field: field});
 				}
 			}
 
@@ -1576,11 +1583,5 @@ class FlxTweenManager extends FlxBasic
 typedef TweenProperty =
 {
 	object:Dynamic,
-	field:FieldType
-}
-
-enum FieldType
-{
-	FIELD(field:String);
-	INDEX(index:Int);
+	field:OneOfTwo<String, Int>
 }

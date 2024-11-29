@@ -3,6 +3,7 @@ package flixel.tweens.misc;
 import flixel.math.FlxPoint;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxAxes;
+import flixel.util.typeLimit.OneOfTwo;
 
 /**
  * Shake effect for a FlxSprite
@@ -69,8 +70,8 @@ class ShakeTween extends FlxTween
 			sprite.offset.y = initialOffset.y + FlxG.random.float(-intensity * sprite.height, intensity * sprite.height);
 	}
 
-	override function isTweenOf(Object:Dynamic, ?Field:FieldType):Bool
+	override function isTweenOf(Object:Dynamic, ?Field:OneOfTwo<String, Int>):Bool
 	{
-		return sprite == Object && (Field == null || Field.match(FIELD("shake")));
+		return sprite == Object && (Field == null || Field == "shake");
 	}
 }
